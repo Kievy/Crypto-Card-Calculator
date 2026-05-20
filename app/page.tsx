@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 type FormState = {
   cardName: string;
@@ -443,6 +444,12 @@ export default function Home() {
         </div>
 
         <div className="flex gap-2.5 max-sm:grid">
+          <Link
+            className="rounded-xl border border-line bg-panel px-4 py-2.5 text-center font-bold shadow-[0_8px_24px_rgb(20_20_20/0.06)]"
+            href="/card-list"
+          >
+            Card List
+          </Link>
           <div className="grid grid-cols-2 rounded-xl border border-line bg-panel p-1 font-extrabold shadow-[0_8px_24px_rgb(20_20_20/0.06)]">
             <button
               className={`rounded-lg px-3 py-2 ${language === "pt-BR" ? "bg-brand text-white" : "text-ink"}`}
