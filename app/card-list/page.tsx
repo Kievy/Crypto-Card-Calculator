@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo, useState } from "react";
 
 type CryptoCard = {
   name: string;
@@ -621,6 +624,14 @@ const cards: CryptoCard[] = [
 const sourceUrl = "https://x.com/Defi_Warhol/status/2057122749345153319";
 
 export default function CardListPage() {
+  const [search, setSearch] = useState("");
+  const normalizedSearch = search.trim().toLowerCase();
+  const filteredCards = useMemo(() => {
+    if (!normalizedSearch) return cards;
+
+    return cards.filter((card) => card.name.toLowerCase().includes(normalizedSearch));
+  }, [normalizedSearch]);
+
   return (
     <main className="min-h-screen bg-surface text-ink">
       <nav className="mx-auto flex min-h-[76px] w-[min(1590px,calc(100%_-_48px))] items-center justify-between gap-4 border-b border-line py-[18px] max-sm:w-[calc(100%_-_28px)] max-sm:flex-col max-sm:items-stretch">
@@ -663,10 +674,37 @@ export default function CardListPage() {
             Based on DeFi Warhol&apos;s article &quot;The Only Neobank List You&apos;ll Ever Need&quot;.
             Each card below keeps the source details grouped into a scannable UI for comparison.
           </p>
+
+          <div className="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+            <label className="grid gap-2">
+              <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-muted">
+                Search by card name
+              </span>
+              <div className="flex min-h-[54px] items-center rounded-xl border border-line bg-panelSoft px-4">
+                <input
+                  className="w-full bg-transparent text-[17px] font-extrabold outline-none placeholder:text-muted/60"
+                  placeholder="Search Etherfi, KAST, RedotPay..."
+                  type="search"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                />
+              </div>
+            </label>
+
+            <div className="rounded-xl border border-line bg-panel px-4 py-3 text-sm font-extrabold text-muted">
+              {filteredCards.length} of {cards.length} cards
+            </div>
+          </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {cards.map((card) => (
+        {filteredCards.length === 0 ? (
+          <div className="rounded-[18px] border border-dashed border-line bg-panel p-8 text-center">
+            <h2 className="text-2xl font-extrabold">No cards found</h2>
+            <p className="mt-2 font-semibold text-muted">Try another card name.</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filteredCards.map((card) => (
             <article
               className="grid gap-5 rounded-[18px] border border-line bg-panel p-5 shadow-[0_18px_42px_rgb(20_20_20/0.05)]"
               key={card.name}
@@ -694,7 +732,8 @@ export default function CardListPage() {
               </dl>
             </article>
           ))}
-        </div>
+          </div>
+        )}
       </section>
     </main>
   );
