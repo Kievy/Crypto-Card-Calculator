@@ -609,29 +609,29 @@ export default function Home() {
             />
             <SummaryInline label={t.effectiveRate} value={money.format(result.effectiveRate)} />
           </div>
+
+          <section className="rounded-[18px] border border-line bg-panel p-6 max-sm:p-5">
+            <div className="mb-[18px] flex items-start justify-between gap-5 max-sm:flex-col max-sm:items-stretch">
+              <div>
+                <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.12em] text-brand">{t.summaryEyebrow}</p>
+                <h2 className="text-[28px] font-extrabold">{t.finalReading}</h2>
+              </div>
+              <span className={`inline-flex min-h-[34px] items-center whitespace-nowrap rounded-full px-3 text-xs font-extrabold ${statusClass}`}>
+                {statusText}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 max-xl:grid-cols-1">
+              <Summary label={t.paidActually} value={money.format(result.finalCost)} />
+              <Summary label={t.comparedToBrl} value={signedMoney(result.netGain)} tone={result.netGain} />
+              <Summary
+                label={t.totalGain}
+                value={`${signedMoney(result.netGain)} (${percent.format(result.netPercent)})`}
+                tone={result.netGain}
+              />
+            </div>
+          </section>
         </aside>
-      </section>
-
-      <section className="mx-auto mb-6 w-[min(1590px,calc(100%_-_48px))] rounded-[18px] border border-line bg-panel p-6 max-lg:w-[min(680px,calc(100%_-_48px))] max-sm:w-[calc(100%_-_28px)] max-sm:p-5">
-        <div className="mb-[18px] flex items-start justify-between gap-5 max-sm:flex-col max-sm:items-stretch">
-          <div>
-            <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.12em] text-brand">{t.summaryEyebrow}</p>
-            <h2 className="text-[28px] font-extrabold">{t.finalReading}</h2>
-          </div>
-          <span className={`inline-flex min-h-[34px] items-center whitespace-nowrap rounded-full px-3 text-xs font-extrabold ${statusClass}`}>
-            {statusText}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3 max-sm:grid-cols-1">
-          <Summary label={t.paidActually} value={money.format(result.finalCost)} />
-          <Summary label={t.comparedToBrl} value={signedMoney(result.netGain)} tone={result.netGain} />
-          <Summary
-            label={t.totalGain}
-            value={`${signedMoney(result.netGain)} (${percent.format(result.netPercent)})`}
-            tone={result.netGain}
-          />
-        </div>
       </section>
 
       <section className="mx-auto mb-14 w-[min(1590px,calc(100%_-_48px))] rounded-[18px] border border-line bg-panel p-6 max-lg:w-[min(680px,calc(100%_-_48px))] max-sm:w-[calc(100%_-_28px)] max-sm:p-5">
