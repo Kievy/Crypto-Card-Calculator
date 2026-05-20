@@ -26,6 +26,12 @@ type Purchase = {
   netPercent: number;
 };
 
+type LiveDollarRate = {
+  value: number;
+  updatedAt: string;
+  source: string;
+};
+
 type Language = "pt-BR" | "en";
 
 const copy = {
@@ -47,6 +53,13 @@ const copy = {
     usdcCharged: "USDC descontado",
     dollarRate: "Dolar atual",
     cashbackUsd: "Cashback em dolar",
+    liveDollar: "Dolar em tempo real",
+    liveDollarSubtitle: "USD/BRL via AwesomeAPI",
+    liveDollarLoading: "Buscando cotação...",
+    liveDollarUnavailable: "Cotação indisponível",
+    liveDollarUpdated: "Atualizado",
+    applyDollar: "Usar cotação",
+    refreshDollar: "Atualizar",
     savePurchase: "Registrar compra",
     saved: "Compra registrada",
     unnamedCard: "Cartao sem nome",
@@ -101,6 +114,13 @@ const copy = {
     usdcCharged: "USDC charged",
     dollarRate: "Current dollar rate",
     cashbackUsd: "Cashback in dollars",
+    liveDollar: "Live dollar rate",
+    liveDollarSubtitle: "USD/BRL via AwesomeAPI",
+    liveDollarLoading: "Fetching rate...",
+    liveDollarUnavailable: "Rate unavailable",
+    liveDollarUpdated: "Updated",
+    applyDollar: "Use rate",
+    refreshDollar: "Refresh",
     savePurchase: "Save purchase",
     saved: "Purchase saved",
     unnamedCard: "Unnamed card",
@@ -196,6 +216,9 @@ export default function Home() {
   const [saveFeedback, setSaveFeedback] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [needsValues, setNeedsValues] = useState(false);
+  const [liveDollarRate, setLiveDollarRate] = useState<LiveDollarRate | null>(null);
+  const [isDollarLoading, setIsDollarLoading] = useState(true);
+  const [dollarError, setDollarError] = useState(false);
   const t = copy[language];
 
   useEffect(() => {
@@ -235,6 +258,61 @@ export default function Home() {
     document.documentElement.lang = language;
     localStorage.setItem(languageStorageKey, language);
   }, [language]);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function fetchDollarRate() {
+      setIsDollarLoading(true);
+      setDollarError(false);
+
+      try {
+        const response = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL", {
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Unable to fetch USD/BRL rate");
+        }
+
+        const data = (await response.json()) as {
+          USDBRL?: {
+            bid?: string;
+            create_date?: string;
+          };
+        };
+        const value = Number.parseFloat(data.USDBRL?.bid ?? "");
+
+        if (!Number.isFinite(value)) {
+          throw new Error("Invalid USD/BRL rate");
+        }
+
+        if (!ignore) {
+          setLiveDollarRate({
+            value,
+            updatedAt: data.USDBRL?.create_date ?? new Date().toISOString(),
+            source: "AwesomeAPI",
+          });
+        }
+      } catch {
+        if (!ignore) {
+          setDollarError(true);
+        }
+      } finally {
+        if (!ignore) {
+          setIsDollarLoading(false);
+        }
+      }
+    }
+
+    fetchDollarRate();
+    const interval = window.setInterval(fetchDollarRate, 60000);
+
+    return () => {
+      ignore = true;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const result = useMemo(() => {
     const cardName = form.cardName.trim() || t.unnamedCard;
@@ -344,6 +422,12 @@ export default function Home() {
     }
   }
 
+  function applyLiveDollarRate() {
+    if (!liveDollarRate) return;
+
+    updateField("dollarRate", liveDollarRate.value.toFixed(4));
+  }
+
   return (
     <main className="min-h-screen bg-surface text-ink">
       <nav className="mx-auto flex min-h-[76px] w-[min(1590px,calc(100%_-_48px))] items-center justify-between gap-4 border-b border-line py-[18px] max-sm:w-[calc(100%_-_28px)] max-sm:flex-col max-sm:items-stretch">
@@ -407,6 +491,38 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-2 gap-[18px] max-sm:grid-cols-1">
+            <div className="col-span-full grid gap-4 rounded-[18px] border border-line bg-panel p-5 sm:grid-cols-[1fr_auto] sm:items-center">
+              <div>
+                <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-muted">
+                  {t.liveDollar}
+                </span>
+                <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
+                  <strong className="text-3xl font-extrabold">
+                    {liveDollarRate ? money.format(liveDollarRate.value) : "--"}
+                  </strong>
+                  <span className="pb-1 text-sm font-bold text-muted">{t.liveDollarSubtitle}</span>
+                </div>
+                <p className="mt-2 text-sm font-bold text-muted">
+                  {isDollarLoading
+                    ? t.liveDollarLoading
+                    : dollarError
+                      ? t.liveDollarUnavailable
+                      : liveDollarRate
+                        ? `${t.liveDollarUpdated}: ${formatDate(liveDollarRate.updatedAt)}`
+                        : t.liveDollarUnavailable}
+                </p>
+              </div>
+
+              <button
+                className="min-h-11 rounded-xl border border-line bg-panelSoft px-4 font-extrabold text-ink disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                disabled={!liveDollarRate}
+                onClick={applyLiveDollarRate}
+              >
+                {t.applyDollar}
+              </button>
+            </div>
+
             <Field label={t.cardName} prefix="Card" className="col-span-full">
               <input
                 className="w-full bg-transparent text-[17px] font-extrabold outline-none placeholder:text-muted/60"
