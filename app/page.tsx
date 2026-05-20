@@ -182,6 +182,11 @@ const percent = new Intl.NumberFormat("pt-BR", {
   maximumFractionDigits: 2,
 });
 
+const brlRate = new Intl.NumberFormat("pt-BR", {
+  minimumFractionDigits: 4,
+  maximumFractionDigits: 4,
+});
+
 function numericValue(value: string) {
   return Number.parseFloat(value.replace(",", ".")) || 0;
 }
@@ -497,7 +502,7 @@ export default function Home() {
                 </span>
                 <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
                   <strong className="text-3xl font-extrabold">
-                    {liveDollarRate ? money.format(liveDollarRate.value) : "--"}
+                    {liveDollarRate ? `R$ ${brlRate.format(liveDollarRate.value)}` : "--"}
                   </strong>
                   <span className="pb-1 text-sm font-bold text-muted">{t.liveDollarSubtitle}</span>
                 </div>
