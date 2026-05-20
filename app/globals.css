@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --surface: 246 246 243;
+  --panel: 255 255 255;
+  --panel-soft: 251 250 248;
+  --ink: 21 21 21;
+  --muted: 112 112 119;
+  --line: 230 226 220;
+  --brand: 99 91 255;
+  --success: 23 191 133;
+  --danger: 217 86 86;
+  --result-bg: 17 17 17;
+  --result-text: 255 255 255;
+  --result-muted: 207 207 212;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: 13 17 25;
+  --panel: 18 23 34;
+  --panel-soft: 23 28 40;
+  --ink: 244 247 251;
+  --muted: 154 164 181;
+  --line: 37 44 58;
+  --brand: 139 124 255;
+  --success: 34 215 154;
+  --danger: 255 107 114;
+  --result-bg: 245 247 255;
+  --result-text: 16 19 26;
+  --result-muted: 91 100 117;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: rgb(var(--ink));
+  background:
+    radial-gradient(circle at 20% 0%, rgb(99 91 255 / 0.1), transparent 30%),
+    radial-gradient(circle at 80% 0%, rgb(32 199 170 / 0.08), transparent 26%),
+    rgb(var(--surface));
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+input,
+button {
+  font: inherit;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+input[type="number"] {
+  appearance: textfield;
+}
