@@ -54,7 +54,7 @@ const copy = {
     dollarRate: "Dolar atual",
     cashbackUsd: "Cashback em dolar",
     liveDollar: "Dolar em tempo real",
-    liveDollarSubtitle: "USD/BRL via AwesomeAPI",
+    liveDollarSubtitle: "USD/BRL via Google Finance",
     liveDollarLoading: "Buscando cotação...",
     liveDollarUnavailable: "Cotação indisponível",
     liveDollarUpdated: "Atualizado",
@@ -115,7 +115,7 @@ const copy = {
     dollarRate: "Current dollar rate",
     cashbackUsd: "Cashback in dollars",
     liveDollar: "Live dollar rate",
-    liveDollarSubtitle: "USD/BRL via AwesomeAPI",
+    liveDollarSubtitle: "USD/BRL via Google Finance",
     liveDollarLoading: "Fetching rate...",
     liveDollarUnavailable: "Rate unavailable",
     liveDollarUpdated: "Updated",
@@ -267,7 +267,7 @@ export default function Home() {
       setDollarError(false);
 
       try {
-        const response = await fetch("https://economia.awesomeapi.com.br/json/last/USD-BRL", {
+        const response = await fetch("/api/google-usd-brl", {
           cache: "no-store",
         });
 
@@ -276,22 +276,21 @@ export default function Home() {
         }
 
         const data = (await response.json()) as {
-          USDBRL?: {
-            bid?: string;
-            create_date?: string;
-          };
+          source?: string;
+          updatedAt?: string;
+          value?: number;
         };
-        const value = Number.parseFloat(data.USDBRL?.bid ?? "");
+        const value = data.value;
 
-        if (!Number.isFinite(value)) {
+        if (!value || !Number.isFinite(value)) {
           throw new Error("Invalid USD/BRL rate");
         }
 
         if (!ignore) {
           setLiveDollarRate({
             value,
-            updatedAt: data.USDBRL?.create_date ?? new Date().toISOString(),
-            source: "AwesomeAPI",
+            updatedAt: data.updatedAt ?? new Date().toISOString(),
+            source: data.source ?? "Google Finance",
           });
         }
       } catch {
