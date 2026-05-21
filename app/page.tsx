@@ -711,25 +711,56 @@ export default function Home() {
             <SummaryInline label={t.effectiveRate} value={money.format(result.effectiveRate)} />
           </div>
 
-          <section className="rounded-[18px] border border-line bg-panel p-6 max-sm:p-5">
-            <div className="mb-[18px] flex items-start justify-between gap-5 max-sm:flex-col max-sm:items-stretch">
-              <div>
-                <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.12em] text-brand">{t.summaryEyebrow}</p>
-                <h2 className="text-[28px] font-extrabold">{t.finalReading}</h2>
-              </div>
-              <span className={`inline-flex min-h-[34px] items-center whitespace-nowrap rounded-full px-3 text-xs font-extrabold ${statusClass}`}>
-                {statusText}
-              </span>
-            </div>
+          <section className="relative min-h-[260px] overflow-hidden rounded-[28px] border border-line bg-[linear-gradient(135deg,rgb(var(--panel))_0%,rgb(var(--panel))_42%,rgb(32_199_170/0.22)_100%)] p-7 shadow-[0_22px_48px_rgb(20_20_20/0.12)] max-sm:p-5">
+            <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgb(53_210_179/0.34),transparent_68%)]" />
+            <div className="absolute right-0 top-0 h-full w-[54%] bg-[linear-gradient(125deg,transparent_0%,rgb(99_91_255/0.12)_42%,rgb(32_199_170/0.2)_100%)] [clip-path:ellipse(70%_70%_at_74%_28%)]" />
 
-            <div className="grid grid-cols-3 gap-3 max-xl:grid-cols-1">
-              <Summary label={t.paidActually} value={money.format(result.finalCost)} />
-              <Summary label={t.comparedToBrl} value={signedMoney(result.netGain)} tone={result.netGain} />
-              <Summary
-                label={t.totalGain}
-                value={`${signedMoney(result.netGain)} (${percent.format(result.netPercent)})`}
-                tone={result.netGain}
-              />
+            <div className="relative flex min-h-[206px] flex-col justify-between gap-8">
+              <div className="flex items-start justify-between gap-5">
+                <div>
+                  <p className="mb-2 text-xs font-extrabold uppercase tracking-[0.12em] text-brand">
+                    {t.summaryEyebrow}
+                  </p>
+                  <div className="flex items-center gap-2.5">
+                    <span className="grid h-10 w-10 place-items-center rounded-[14px] bg-gradient-to-br from-brand to-[#20c7aa] text-sm font-extrabold text-white shadow-[0_12px_26px_rgb(32_199_170/0.24)]">
+                      C
+                    </span>
+                    <h2 className="text-[22px] font-extrabold">{t.finalReading}</h2>
+                  </div>
+                </div>
+                <span
+                  className={`inline-flex min-h-[34px] shrink-0 items-center whitespace-nowrap rounded-full px-3 text-xs font-extrabold ${statusClass}`}
+                >
+                  {statusText}
+                </span>
+              </div>
+
+              <div className="grid gap-2 self-end text-right">
+                <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-muted">
+                  {t.paidActually}
+                </span>
+                <strong className="text-[clamp(34px,5vw,48px)] leading-none">
+                  {money.format(result.finalCost)}
+                </strong>
+                <span className={`text-lg font-extrabold ${toneClass(result.netGain)}`}>
+                  {signedMoney(result.netGain)} ({percent.format(result.netPercent)})
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-5 border-t border-line/70 pt-4 max-sm:grid-cols-1">
+                <div>
+                  <span className="mb-1 block text-xs font-extrabold text-muted">{t.comparedToBrl}</span>
+                  <strong className={`block text-lg ${toneClass(result.netGain)}`}>
+                    {signedMoney(result.netGain)}
+                  </strong>
+                </div>
+                <div className="text-right max-sm:text-left">
+                  <span className="mb-1 block text-xs font-extrabold text-muted">{t.totalGain}</span>
+                  <strong className={`block text-lg ${toneClass(result.netGain)}`}>
+                    {percent.format(result.netPercent)}
+                  </strong>
+                </div>
+              </div>
             </div>
           </section>
         </aside>
