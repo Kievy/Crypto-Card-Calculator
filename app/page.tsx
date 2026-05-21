@@ -528,11 +528,10 @@ export default function Home() {
 
       <section className="mx-auto grid w-[min(1590px,calc(100%_-_48px))] grid-cols-[minmax(0,1.06fr)_minmax(320px,0.74fr)] gap-8 py-14 max-lg:w-[min(680px,calc(100%_-_48px))] max-lg:grid-cols-1 max-lg:py-8 max-sm:w-[calc(100%_-_28px)]">
         <div className="rounded-[28px] border border-line bg-[linear-gradient(145deg,rgb(var(--panel)/0.95),rgb(var(--panel)/0.78))] p-8 max-sm:p-5">
-          <div className="relative pr-32 max-sm:pr-0">
+          <div>
             <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.12em] text-brand">
               {t.eyebrow}
             </p>
-            <div className="absolute right-0 top-1.5 h-[74px] w-[118px] rotate-[10deg] rounded-[18px] bg-gradient-to-br from-[#22c5e8] to-[#7955e8] shadow-[0_16px_34px_rgb(85_82_210/0.22)] max-sm:static max-sm:mb-7 max-sm:ml-auto" />
             <h1 className="mb-3 max-w-[560px] text-[clamp(38px,5vw,64px)] font-extrabold leading-none">
               {t.title}
             </h1>
