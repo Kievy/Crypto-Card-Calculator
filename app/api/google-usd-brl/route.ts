@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const googleFinanceUrl = "https://www.google.com/finance/beta/quote/USD-BRL?hl=pt";
-const yahooFinanceSymbol = "USDBRL=X";
+const tradingViewSocketUrl = "wss://data.tradingview.com/socket.io/websocket";
+const tradingViewSymbol = "FX_IDC:USDBRL";
 
 export const dynamic = "force-dynamic";
 
@@ -48,65 +49,144 @@ function saoPauloTimestamp(date: string, time: string) {
   return Math.floor(new Date(`${date}T${time || "13:00"}:00-03:00`).getTime() / 1000);
 }
 
-async function fetchHistoricalRate(date: string, time: string) {
-  const selectedTimestamp = saoPauloTimestamp(date, time);
-  const period1 = selectedTimestamp - 60 * 60 * 2;
-  const period2 = selectedTimestamp + 60 * 60 * 2;
-  const url =
-    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooFinanceSymbol)}` +
-    `?period1=${period1}&period2=${period2}&interval=5m`;
+function tradingViewSession(prefix: string) {
+  return `${prefix}_${Math.random().toString(36).slice(2, 14)}`;
+}
 
-  const response = await fetch(url, {
-    headers: {
-      Accept: "application/json",
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
-    },
+function tradingViewMessage(method: string, params: unknown[]) {
+  const payload = JSON.stringify({ m: method, p: params });
+
+  return `~m~${payload.length}~m~${payload}`;
+}
+
+function parseTradingViewFrames(data: string) {
+  const frames: Array<{ m?: string; p?: unknown[] }> = [];
+  let cursor = 0;
+
+  while (cursor < data.length) {
+    const markerStart = data.indexOf("~m~", cursor);
+
+    if (markerStart === -1) break;
+
+    const lengthStart = markerStart + 3;
+    const lengthEnd = data.indexOf("~m~", lengthStart);
+
+    if (lengthEnd === -1) break;
+
+    const frameLength = Number(data.slice(lengthStart, lengthEnd));
+    const payloadStart = lengthEnd + 3;
+    const payloadEnd = payloadStart + frameLength;
+
+    if (!Number.isFinite(frameLength) || payloadEnd > data.length) break;
+
+    try {
+      frames.push(JSON.parse(data.slice(payloadStart, payloadEnd)) as { m?: string; p?: unknown[] });
+    } catch {
+      // Ignore heartbeat and partial frames.
+    }
+
+    cursor = payloadEnd;
+  }
+
+  return frames;
+}
+
+function candlesFromTimescaleUpdate(frame: { p?: unknown[] }) {
+  const payload = frame.p?.[1] as Record<string, { s?: unknown[] }> | undefined;
+  const series = payload?.s1?.s ?? [];
+
+  return series
+    .map((item) => {
+      const bar = item as { v?: unknown[] };
+      const values = bar.v ?? [];
+      const timestamp = Number(values[0]);
+      const close = Number(values[4]);
+
+      return { timestamp, value: close };
+    })
+    .filter((quote): quote is { timestamp: number; value: number } => {
+      return Number.isFinite(quote.timestamp) && Number.isFinite(quote.value);
+    });
+}
+
+async function fetchHistoricalRate(date: string, time: string) {
+  process.env.WS_NO_BUFFER_UTIL = "1";
+  process.env.WS_NO_UTF_8_VALIDATE = "1";
+
+  const { default: WebSocket } = await import("ws");
+  const selectedTimestamp = saoPauloTimestamp(date, time);
+  const nowTimestamp = Math.floor(Date.now() / 1000);
+  const fiveMinuteBarsSinceDate = Math.ceil(Math.max(0, nowTimestamp - selectedTimestamp) / 300);
+  const countBack = Math.min(Math.max(fiveMinuteBarsSinceDate + 80, 300), 10000);
+  const chartSession = tradingViewSession("cs");
+  const symbolPayload = JSON.stringify({
+    adjustment: "splits",
+    session: "regular",
+    symbol: tradingViewSymbol,
   });
 
-  if (!response.ok) {
-    throw new Error(`Yahoo Finance responded with ${response.status}`);
-  }
+  return await new Promise<NextResponse>((resolve, reject) => {
+    const socket = new WebSocket(tradingViewSocketUrl, {
+      headers: {
+        Origin: "https://www.tradingview.com",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
+      },
+    });
+    const timeout = setTimeout(() => {
+      socket.close();
+      reject(new Error("TradingView historical quote request timed out"));
+    }, 12000);
 
-  const data = (await response.json()) as {
-    chart?: {
-      result?: Array<{
-        timestamp?: number[];
-        indicators?: {
-          quote?: Array<{
-            close?: Array<number | null>;
-          }>;
-        };
-      }>;
-      error?: unknown;
-    };
-  };
-  const result = data.chart?.result?.[0];
-  const timestamps = result?.timestamp ?? [];
-  const closePrices = result?.indicators?.quote?.[0]?.close ?? [];
-  const quotes = timestamps
-    .map((timestamp, index) => ({
-      timestamp,
-      value: closePrices[index],
-    }))
-    .filter((quote): quote is { timestamp: number; value: number } => Number.isFinite(quote.value));
+    socket.addEventListener("open", () => {
+      socket.send(tradingViewMessage("set_auth_token", ["unauthorized_user_token"]));
+      socket.send(tradingViewMessage("chart_create_session", [chartSession, ""]));
+      socket.send(tradingViewMessage("resolve_symbol", [chartSession, "symbol_1", `=${symbolPayload}`]));
+      socket.send(tradingViewMessage("create_series", [chartSession, "s1", "s1", "symbol_1", "5", countBack]));
+    });
 
-  if (!quotes.length) {
-    throw new Error("No Yahoo Finance intraday quotes found for selected date");
-  }
+    socket.addEventListener("message", (event) => {
+      const rawData = typeof event.data === "string" ? event.data : "";
 
-  const closest = quotes.reduce((best, quote) => {
-    return Math.abs(quote.timestamp - selectedTimestamp) < Math.abs(best.timestamp - selectedTimestamp)
-      ? quote
-      : best;
-  }, quotes[0]);
+      if (rawData.startsWith("~h~")) {
+        socket.send(rawData);
+        return;
+      }
 
-  return NextResponse.json({
-    source: "Yahoo Finance",
-    sourceUrl: url,
-    updatedAt: new Date(closest.timestamp * 1000).toISOString(),
-    requestedAt: `${date}T${time}:00`,
-    value: Number(closest.value.toFixed(4)),
+      const frames = parseTradingViewFrames(rawData);
+      const timescaleFrame = frames.find((frame) => frame.m === "timescale_update");
+
+      if (!timescaleFrame) return;
+
+      const quotes = candlesFromTimescaleUpdate(timescaleFrame);
+
+      if (!quotes.length) return;
+
+      clearTimeout(timeout);
+      socket.close();
+
+      const closest = quotes.reduce((best, quote) => {
+        return Math.abs(quote.timestamp - selectedTimestamp) < Math.abs(best.timestamp - selectedTimestamp)
+          ? quote
+          : best;
+      }, quotes[0]);
+
+      resolve(
+        NextResponse.json({
+          source: "TradingView",
+          sourceUrl: `https://www.tradingview.com/symbols/${tradingViewSymbol.replace(":", "-")}/`,
+          updatedAt: new Date(closest.timestamp * 1000).toISOString(),
+          requestedAt: `${date}T${time}:00`,
+          value: Number(closest.value.toFixed(4)),
+        }),
+      );
+    });
+
+    socket.addEventListener("error", () => {
+      clearTimeout(timeout);
+      socket.close();
+      reject(new Error("Unable to connect to TradingView"));
+    });
   });
 }
 
@@ -120,7 +200,7 @@ export async function GET(request: NextRequest) {
     } catch {
       return NextResponse.json(
         {
-          error: "Unable to fetch historical Yahoo Finance USD/BRL rate",
+          error: "Unable to fetch historical TradingView USD/BRL rate",
         },
         {
           status: 502,

@@ -12,7 +12,7 @@ O projeto também inclui uma lista pesquisável de cartões cripto e um ticker c
 - Resumo visual da compra em formato de cartão, mostrando ganho ou perda em reais e porcentagem.
 - Registro de compras salvo localmente no navegador via `localStorage`.
 - Cotação USD/BRL em tempo real via Google Finance.
-- Cotação histórica por data e hora via Yahoo Finance, usando o par `USDBRL=X`.
+- Cotação histórica por data e hora via TradingView, usando o símbolo `FX_IDC:USDBRL`.
 - Ticker infinito no topo com preço em dólar das top 10 criptomoedas via CoinGecko.
 - Página `Card List` com cartões cripto, descrições, custódia, redes, taxas e recompensas.
 - Busca por nome de cartão na lista.
@@ -64,11 +64,11 @@ Fonte usada:
 
 ### USD/BRL histórico por data e hora
 
-Quando o usuário seleciona uma data e hora no modo histórico, a mesma rota consulta o Yahoo Finance usando o par `USDBRL=X`. A API busca uma janela intraday ao redor do horário escolhido e retorna a cotação mais próxima, com 4 casas decimais.
+Quando o usuário seleciona uma data e hora no modo histórico, a mesma rota consulta o feed público de candles do TradingView usando o símbolo `FX_IDC:USDBRL`. A API busca candles de 5 minutos e retorna a cotação mais próxima, com 4 casas decimais.
 
 Fonte usada:
 
-- Yahoo Finance: `USDBRL=X`
+- TradingView: `FX_IDC:USDBRL`
 
 ### Top 10 criptomoedas
 
