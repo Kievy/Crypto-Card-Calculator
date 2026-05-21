@@ -32,9 +32,11 @@ type LiveDollarRate = {
   value: number;
   updatedAt: string;
   source: string;
+  requestedAt?: string;
 };
 
 type Language = "pt-BR" | "en";
+type DollarQuoteMode = "live" | "historical";
 
 const copy = {
   "pt-BR": {
@@ -48,15 +50,22 @@ const copy = {
     eyebrow: "Compra cripto x custo real",
     title: "Compare o preço real da sua compra.",
     subtitle:
-      "Informe o valor em reais, o USDC descontado, o dolar atual e o cashback recebido para ver o custo final e o ganho liquido.",
+      "Informe o valor em reais, o USDC descontado, o dólar atual e o cashback recebido para ver o custo final e o ganho líquido.",
     cardName: "Nome do cartão",
     cardPlaceholder: "Ex: Ether.fi, OKX, Kast",
     purchaseBrl: "Valor da compra em reais",
     usdcCharged: "USDC descontado",
-    dollarRate: "Dolar atual",
-    cashbackUsd: "Cashback em dolar",
-    liveDollar: "Dolar em tempo real",
+    dollarRate: "Dólar atual",
+    cashbackUsd: "Cashback em dólar",
+    liveDollar: "Dólar em tempo real",
     liveDollarSubtitle: "USD/BRL via Google Finance",
+    liveDollarHistoricalSubtitle: "USD/BRL histórico via Banco Central PTAX",
+    liveDollarModeLive: "Tempo real",
+    liveDollarModeHistorical: "Histórico",
+    historicalDate: "Dia da cotação",
+    historicalTime: "Hora da cotação",
+    historicalEmpty: "Escolha dia e hora para buscar a cotação",
+    historicalClosest: "Cotação mais próxima",
     liveDollarLoading: "Buscando cotação...",
     liveDollarUnavailable: "Cotação indisponível",
     liveDollarUpdated: "Atualizado",
@@ -94,9 +103,9 @@ const copy = {
     clipboardCard: "Cartao",
     clipboardPurchase: "Compra em reais",
     clipboardUsdc: "USDC descontado",
-    clipboardDollar: "Dolar atual",
+    clipboardDollar: "Dólar atual",
     clipboardFinalCost: "Custo final",
-    clipboardNetGain: "Ganho liquido",
+    clipboardNetGain: "Ganho líquido",
   },
   en: {
     themeLight: "Light",
@@ -118,6 +127,13 @@ const copy = {
     cashbackUsd: "Cashback in dollars",
     liveDollar: "Live dollar rate",
     liveDollarSubtitle: "USD/BRL via Google Finance",
+    liveDollarHistoricalSubtitle: "Historical USD/BRL via Banco Central PTAX",
+    liveDollarModeLive: "Real time",
+    liveDollarModeHistorical: "Historical",
+    historicalDate: "Quote date",
+    historicalTime: "Quote time",
+    historicalEmpty: "Choose date and time to fetch the quote",
+    historicalClosest: "Closest quote",
     liveDollarLoading: "Fetching rate...",
     liveDollarUnavailable: "Rate unavailable",
     liveDollarUpdated: "Updated",
@@ -226,6 +242,9 @@ export default function Home() {
   const [liveDollarRate, setLiveDollarRate] = useState<LiveDollarRate | null>(null);
   const [isDollarLoading, setIsDollarLoading] = useState(true);
   const [dollarError, setDollarError] = useState(false);
+  const [dollarQuoteMode, setDollarQuoteMode] = useState<DollarQuoteMode>("live");
+  const [historicalDate, setHistoricalDate] = useState("");
+  const [historicalTime, setHistoricalTime] = useState("13:00");
   const t = copy[language];
 
   useEffect(() => {
@@ -270,11 +289,24 @@ export default function Home() {
     let ignore = false;
 
     async function fetchDollarRate() {
+      if (dollarQuoteMode === "historical" && !historicalDate) {
+        setLiveDollarRate(null);
+        setIsDollarLoading(false);
+        setDollarError(false);
+        return;
+      }
+
       setIsDollarLoading(true);
       setDollarError(false);
 
       try {
-        const response = await fetch("/api/google-usd-brl", {
+        const quoteUrl =
+          dollarQuoteMode === "historical"
+            ? `/api/google-usd-brl?date=${encodeURIComponent(historicalDate)}&time=${encodeURIComponent(
+                historicalTime || "13:00",
+              )}`
+            : "/api/google-usd-brl";
+        const response = await fetch(quoteUrl, {
           cache: "no-store",
         });
 
@@ -285,6 +317,7 @@ export default function Home() {
         const data = (await response.json()) as {
           source?: string;
           updatedAt?: string;
+          requestedAt?: string;
           value?: number;
         };
         const value = data.value;
@@ -298,6 +331,7 @@ export default function Home() {
             value,
             updatedAt: data.updatedAt ?? new Date().toISOString(),
             source: data.source ?? "Google Finance",
+            requestedAt: data.requestedAt,
           });
         }
       } catch {
@@ -311,14 +345,17 @@ export default function Home() {
       }
     }
 
-    fetchDollarRate();
-    const interval = window.setInterval(fetchDollarRate, 60000);
+    void fetchDollarRate();
+    const interval =
+      dollarQuoteMode === "live" ? window.setInterval(fetchDollarRate, 60000) : undefined;
 
     return () => {
       ignore = true;
-      window.clearInterval(interval);
+      if (interval) {
+        window.clearInterval(interval);
+      }
     };
-  }, []);
+  }, [dollarQuoteMode, historicalDate, historicalTime]);
 
   const result = useMemo(() => {
     const cardName = form.cardName.trim() || t.unnamedCard;
@@ -505,26 +542,80 @@ export default function Home() {
           </div>
 
           <div className="grid grid-cols-2 gap-[18px] max-sm:grid-cols-1">
-            <div className="col-span-full grid gap-4 rounded-[18px] border border-line bg-panel p-5 sm:grid-cols-[1fr_auto] sm:items-center">
-              <div>
-                <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-muted">
-                  {t.liveDollar}
-                </span>
-                <div className="mt-2 flex flex-wrap items-end gap-x-3 gap-y-1">
-                  <strong className="text-3xl font-extrabold">
-                    {liveDollarRate ? `R$ ${brlRate.format(liveDollarRate.value)}` : "--"}
-                  </strong>
-                  <span className="pb-1 text-sm font-bold text-muted">{t.liveDollarSubtitle}</span>
+            <div className="col-span-full grid gap-5 rounded-[18px] border border-line bg-panel p-5 lg:grid-cols-[1fr_auto] lg:items-end">
+              <div className="grid gap-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-xs font-extrabold uppercase tracking-[0.08em] text-muted">
+                    {t.liveDollar}
+                  </span>
+                  <div className="grid grid-cols-2 rounded-xl border border-line bg-panelSoft p-1 text-sm font-extrabold">
+                    <button
+                      className={`rounded-lg px-3 py-2 ${
+                        dollarQuoteMode === "live" ? "bg-brand text-white" : "text-ink"
+                      }`}
+                      type="button"
+                      onClick={() => setDollarQuoteMode("live")}
+                    >
+                      {t.liveDollarModeLive}
+                    </button>
+                    <button
+                      className={`rounded-lg px-3 py-2 ${
+                        dollarQuoteMode === "historical" ? "bg-brand text-white" : "text-ink"
+                      }`}
+                      type="button"
+                      onClick={() => setDollarQuoteMode("historical")}
+                    >
+                      {t.liveDollarModeHistorical}
+                    </button>
+                  </div>
                 </div>
-                <p className="mt-2 text-sm font-bold text-muted">
-                  {isDollarLoading
-                    ? t.liveDollarLoading
-                    : dollarError
-                      ? t.liveDollarUnavailable
-                      : liveDollarRate
-                        ? `${t.liveDollarUpdated}: ${formatDate(liveDollarRate.updatedAt)}`
-                        : t.liveDollarUnavailable}
-                </p>
+
+                {dollarQuoteMode === "historical" ? (
+                  <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
+                    <label className="grid gap-2">
+                      <span className="text-xs font-extrabold text-muted">{t.historicalDate}</span>
+                      <input
+                        className="min-h-11 rounded-xl border border-line bg-panelSoft px-3.5 font-extrabold text-ink outline-none"
+                        type="date"
+                        value={historicalDate}
+                        onChange={(event) => setHistoricalDate(event.target.value)}
+                      />
+                    </label>
+                    <label className="grid gap-2">
+                      <span className="text-xs font-extrabold text-muted">{t.historicalTime}</span>
+                      <input
+                        className="min-h-11 rounded-xl border border-line bg-panelSoft px-3.5 font-extrabold text-ink outline-none"
+                        type="time"
+                        value={historicalTime}
+                        onChange={(event) => setHistoricalTime(event.target.value)}
+                      />
+                    </label>
+                  </div>
+                ) : null}
+
+                <div>
+                  <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
+                    <strong className="text-3xl font-extrabold">
+                      {liveDollarRate ? `R$ ${brlRate.format(liveDollarRate.value)}` : "--"}
+                    </strong>
+                    <span className="pb-1 text-sm font-bold text-muted">
+                      {dollarQuoteMode === "historical" ? t.liveDollarHistoricalSubtitle : t.liveDollarSubtitle}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-sm font-bold text-muted">
+                    {dollarQuoteMode === "historical" && !historicalDate
+                      ? t.historicalEmpty
+                      : isDollarLoading
+                        ? t.liveDollarLoading
+                        : dollarError
+                          ? t.liveDollarUnavailable
+                          : liveDollarRate
+                            ? `${
+                                dollarQuoteMode === "historical" ? t.historicalClosest : t.liveDollarUpdated
+                              }: ${formatDate(liveDollarRate.updatedAt)}`
+                            : t.liveDollarUnavailable}
+                  </p>
+                </div>
               </div>
 
               <button

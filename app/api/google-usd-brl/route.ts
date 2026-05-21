@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const googleFinanceUrl = "https://www.google.com/finance/beta/quote/USD-BRL?hl=pt";
 
@@ -43,7 +43,86 @@ function parseGooglePrice(html: string) {
   return rawPrice ? parseNumber(rawPrice) : null;
 }
 
-export async function GET() {
+function formatBcbDate(date: string) {
+  const [year, month, day] = date.split("-");
+  return `${month}-${day}-${year}`;
+}
+
+function minutesFromTime(value: string) {
+  const [hour, minute] = value.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+async function fetchHistoricalRate(date: string, time: string) {
+  const bcbDate = formatBcbDate(date);
+  const url =
+    "https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/" +
+    `CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?` +
+    `@dataInicial='${bcbDate}'&@dataFinalCotacao='${bcbDate}'&$top=100&$format=json`;
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`BCB responded with ${response.status}`);
+  }
+
+  const data = (await response.json()) as {
+    value?: Array<{
+      cotacaoCompra: number;
+      cotacaoVenda: number;
+      dataHoraCotacao: string;
+    }>;
+  };
+  const quotes = data.value ?? [];
+
+  if (!quotes.length) {
+    throw new Error("No BCB PTAX quotes found for selected date");
+  }
+
+  const selectedMinutes = minutesFromTime(time);
+  const closest = quotes.reduce((best, quote) => {
+    const quoteDate = new Date(quote.dataHoraCotacao);
+    const quoteMinutes = quoteDate.getHours() * 60 + quoteDate.getMinutes();
+    const bestDate = new Date(best.dataHoraCotacao);
+    const bestMinutes = bestDate.getHours() * 60 + bestDate.getMinutes();
+
+    return Math.abs(quoteMinutes - selectedMinutes) < Math.abs(bestMinutes - selectedMinutes)
+      ? quote
+      : best;
+  }, quotes[0]);
+
+  return NextResponse.json({
+    source: "Banco Central PTAX",
+    sourceUrl: url,
+    updatedAt: closest.dataHoraCotacao,
+    requestedAt: `${date}T${time}:00`,
+    value: closest.cotacaoVenda,
+  });
+}
+
+export async function GET(request: NextRequest) {
+  const date = request.nextUrl.searchParams.get("date");
+  const time = request.nextUrl.searchParams.get("time") ?? "13:00";
+
+  if (date) {
+    try {
+      return await fetchHistoricalRate(date, time);
+    } catch {
+      return NextResponse.json(
+        {
+          error: "Unable to fetch historical BCB PTAX USD/BRL rate",
+        },
+        {
+          status: 502,
+        },
+      );
+    }
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
 
