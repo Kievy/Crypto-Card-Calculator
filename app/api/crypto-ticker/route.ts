@@ -9,6 +9,7 @@ type CoinGeckoMarket = {
   id: string;
   symbol: string;
   name: string;
+  image: string;
   current_price: number;
   price_change_percentage_24h: number | null;
 };
@@ -38,6 +39,7 @@ export async function GET() {
         id: coin.id,
         name: coin.name,
         symbol: coin.symbol.toUpperCase(),
+        image: coin.image,
         priceUsd: coin.current_price,
         change24h: coin.price_change_percentage_24h ?? 0,
       })),

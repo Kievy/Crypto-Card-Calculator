@@ -82,3 +82,15 @@ input[type="number"] {
 .animate-crypto-ticker:hover {
   animation-play-state: paused;
 }
+
+html[data-theme="dark"] .crypto-ticker-shell {
+  background: #101722;
+}
+
+html[data-theme="dark"] .crypto-ticker-symbol {
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .crypto-ticker-price {
+  color: #c7cfdd;
+}

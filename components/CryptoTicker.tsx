@@ -6,6 +6,7 @@ type TickerCoin = {
   id: string;
   name: string;
   symbol: string;
+  image: string;
   priceUsd: number;
   change24h: number;
 };
@@ -72,27 +73,29 @@ export function CryptoTicker() {
   }, [coins]);
 
   return (
-    <section className="w-full overflow-hidden border-b border-line bg-[rgb(var(--result-bg))] text-[rgb(var(--result-text))]">
-      <div className="flex min-h-11 items-center gap-4">
-        <div className="z-10 flex h-11 shrink-0 items-center border-r border-[rgb(var(--result-muted)/0.25)] bg-[rgb(var(--result-bg))] px-6 text-xs font-extrabold uppercase tracking-[0.12em] text-brand">
-          Top 10 Crypto
-        </div>
-
+    <section className="crypto-ticker-shell w-full overflow-hidden border-b border-line bg-panel text-ink">
+      <div className="flex min-h-12 items-center gap-4">
         {isLoading && !coins.length ? (
-          <div className="text-sm font-bold text-[rgb(var(--result-muted))]">Loading live USD prices...</div>
+          <div className="px-6 text-sm font-bold text-muted">Loading live USD prices...</div>
         ) : (
-          <div className="flex min-w-max animate-crypto-ticker items-center gap-3">
+          <div className="flex min-w-max animate-crypto-ticker items-center gap-10">
             {tickerItems.map((coin, index) => {
               const positive = coin.change24h >= 0;
 
               return (
                 <div
-                  className="flex items-center gap-2 rounded-full border border-[rgb(var(--result-muted)/0.18)] bg-[rgb(var(--result-text)/0.06)] px-4 py-2 text-sm font-extrabold"
+                  className="flex items-center gap-2 text-sm font-extrabold"
                   key={`${coin.id}-${index}`}
                 >
-                  <span>{coin.symbol}</span>
-                  <span className="text-[rgb(var(--result-muted))]">{formatUsd(coin.priceUsd)}</span>
-                  <span className={positive ? "text-success" : "text-danger"}>
+                  {coin.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img alt="" className="h-6 w-6 rounded-full" src={coin.image} />
+                  ) : (
+                    <span className="h-6 w-6 rounded-full bg-panelSoft" />
+                  )}
+                  <span className="crypto-ticker-symbol text-ink">{coin.symbol}</span>
+                  <span className="crypto-ticker-price text-muted">{formatUsd(coin.priceUsd)}</span>
+                  <span className={`rounded-md px-2 py-1 ${positive ? "bg-success/15 text-success" : "bg-danger/15 text-danger"}`}>
                     {positive ? "+" : ""}
                     {coin.change24h.toFixed(2)}%
                   </span>
