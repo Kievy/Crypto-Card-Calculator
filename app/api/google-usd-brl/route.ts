@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const googleFinanceUrl = "https://www.google.com/finance/beta/quote/USD-BRL?hl=pt";
+const yahooFinanceSymbol = "USDBRL=X";
 
 export const dynamic = "force-dynamic";
 
@@ -43,64 +44,69 @@ function parseGooglePrice(html: string) {
   return rawPrice ? parseNumber(rawPrice) : null;
 }
 
-function formatBcbDate(date: string) {
-  const [year, month, day] = date.split("-");
-  return `${month}-${day}-${year}`;
-}
-
-function minutesFromTime(value: string) {
-  const [hour, minute] = value.split(":").map(Number);
-  return hour * 60 + minute;
+function saoPauloTimestamp(date: string, time: string) {
+  return Math.floor(new Date(`${date}T${time || "13:00"}:00-03:00`).getTime() / 1000);
 }
 
 async function fetchHistoricalRate(date: string, time: string) {
-  const bcbDate = formatBcbDate(date);
+  const selectedTimestamp = saoPauloTimestamp(date, time);
+  const period1 = selectedTimestamp - 60 * 60 * 2;
+  const period2 = selectedTimestamp + 60 * 60 * 2;
   const url =
-    "https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/" +
-    `CotacaoDolarPeriodo(dataInicial=@dataInicial,dataFinalCotacao=@dataFinalCotacao)?` +
-    `@dataInicial='${bcbDate}'&@dataFinalCotacao='${bcbDate}'&$top=100&$format=json`;
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooFinanceSymbol)}` +
+    `?period1=${period1}&period2=${period2}&interval=5m`;
 
   const response = await fetch(url, {
     headers: {
       Accept: "application/json",
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
     },
   });
 
   if (!response.ok) {
-    throw new Error(`BCB responded with ${response.status}`);
+    throw new Error(`Yahoo Finance responded with ${response.status}`);
   }
 
   const data = (await response.json()) as {
-    value?: Array<{
-      cotacaoCompra: number;
-      cotacaoVenda: number;
-      dataHoraCotacao: string;
-    }>;
+    chart?: {
+      result?: Array<{
+        timestamp?: number[];
+        indicators?: {
+          quote?: Array<{
+            close?: Array<number | null>;
+          }>;
+        };
+      }>;
+      error?: unknown;
+    };
   };
-  const quotes = data.value ?? [];
+  const result = data.chart?.result?.[0];
+  const timestamps = result?.timestamp ?? [];
+  const closePrices = result?.indicators?.quote?.[0]?.close ?? [];
+  const quotes = timestamps
+    .map((timestamp, index) => ({
+      timestamp,
+      value: closePrices[index],
+    }))
+    .filter((quote): quote is { timestamp: number; value: number } => Number.isFinite(quote.value));
 
   if (!quotes.length) {
-    throw new Error("No BCB PTAX quotes found for selected date");
+    throw new Error("No Yahoo Finance intraday quotes found for selected date");
   }
 
-  const selectedMinutes = minutesFromTime(time);
   const closest = quotes.reduce((best, quote) => {
-    const quoteDate = new Date(quote.dataHoraCotacao);
-    const quoteMinutes = quoteDate.getHours() * 60 + quoteDate.getMinutes();
-    const bestDate = new Date(best.dataHoraCotacao);
-    const bestMinutes = bestDate.getHours() * 60 + bestDate.getMinutes();
-
-    return Math.abs(quoteMinutes - selectedMinutes) < Math.abs(bestMinutes - selectedMinutes)
+    return Math.abs(quote.timestamp - selectedTimestamp) < Math.abs(best.timestamp - selectedTimestamp)
       ? quote
       : best;
   }, quotes[0]);
 
   return NextResponse.json({
-    source: "Banco Central PTAX",
+    source: "Yahoo Finance",
     sourceUrl: url,
-    updatedAt: closest.dataHoraCotacao,
+    updatedAt: new Date(closest.timestamp * 1000).toISOString(),
     requestedAt: `${date}T${time}:00`,
-    value: closest.cotacaoVenda,
+    value: Number(closest.value.toFixed(4)),
   });
 }
 
@@ -114,7 +120,7 @@ export async function GET(request: NextRequest) {
     } catch {
       return NextResponse.json(
         {
-          error: "Unable to fetch historical BCB PTAX USD/BRL rate",
+          error: "Unable to fetch historical Yahoo Finance USD/BRL rate",
         },
         {
           status: 502,
