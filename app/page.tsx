@@ -532,7 +532,7 @@ export default function Home() {
             <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.12em] text-brand">
               {t.eyebrow}
             </p>
-            <h1 className="mb-3 max-w-[560px] text-[clamp(38px,5vw,64px)] font-extrabold leading-none">
+            <h1 className="mb-3 max-w-[760px] text-[clamp(38px,5vw,64px)] font-extrabold leading-none">
               {t.title}
             </h1>
             <p className="mb-8 max-w-[520px] leading-7 text-muted">
