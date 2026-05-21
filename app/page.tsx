@@ -710,9 +710,9 @@ export default function Home() {
             <SummaryInline label={t.effectiveRate} value={money.format(result.effectiveRate)} />
           </div>
 
-          <section className="relative min-h-[260px] overflow-hidden rounded-[28px] border border-line bg-[linear-gradient(135deg,rgb(var(--panel))_0%,rgb(var(--panel))_42%,rgb(32_199_170/0.22)_100%)] p-7 shadow-[0_22px_48px_rgb(20_20_20/0.12)] max-sm:p-5">
-            <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgb(53_210_179/0.34),transparent_68%)]" />
-            <div className="absolute right-0 top-0 h-full w-[54%] bg-[linear-gradient(125deg,transparent_0%,rgb(99_91_255/0.12)_42%,rgb(32_199_170/0.2)_100%)] [clip-path:ellipse(70%_70%_at_74%_28%)]" />
+          <section className="relative min-h-[260px] overflow-hidden rounded-[28px] border border-line bg-[linear-gradient(135deg,rgb(var(--panel))_0%,rgb(var(--panel))_58%,rgb(var(--panel-soft))_100%)] p-7 shadow-[0_22px_48px_rgb(20_20_20/0.12)] max-sm:p-5">
+            <div className="absolute -right-20 -top-24 h-64 w-64 rounded-full bg-[radial-gradient(circle,rgb(99_91_255/0.12),transparent_70%)]" />
+            <div className="absolute right-0 top-0 h-full w-[48%] bg-[linear-gradient(125deg,transparent_0%,rgb(99_91_255/0.08)_55%,rgb(32_199_170/0.07)_100%)] [clip-path:ellipse(70%_70%_at_74%_28%)]" />
 
             <div className="relative flex min-h-[206px] flex-col justify-between gap-8">
               <div className="flex items-start justify-between gap-5">
