@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes crypto-ticker {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
 :root {
   color-scheme: light;
   --surface: 246 246 243;
@@ -63,4 +73,12 @@ input[type="number"]::-webkit-inner-spin-button {
 
 input[type="number"] {
   appearance: textfield;
+}
+
+.animate-crypto-ticker {
+  animation: crypto-ticker 38s linear infinite;
+}
+
+.animate-crypto-ticker:hover {
+  animation-play-state: paused;
 }

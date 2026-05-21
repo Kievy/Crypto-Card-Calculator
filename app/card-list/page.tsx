@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { CryptoTicker } from "../../components/CryptoTicker";
 
 type CryptoCard = {
   name: string;
@@ -634,6 +635,8 @@ export default function CardListPage() {
 
   return (
     <main className="min-h-screen bg-surface text-ink">
+      <CryptoTicker />
+
       <nav className="mx-auto flex min-h-[76px] w-[min(1590px,calc(100%_-_48px))] items-center justify-between gap-4 border-b border-line py-[18px] max-sm:w-[calc(100%_-_28px)] max-sm:flex-col max-sm:items-stretch">
         <Link className="inline-flex items-center gap-3 font-extrabold" href="/">
           <span className="grid h-[34px] w-[34px] place-items-center rounded-[10px] bg-gradient-to-br from-brand to-[#35d2b3] text-white">
