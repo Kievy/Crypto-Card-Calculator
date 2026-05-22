@@ -44,6 +44,8 @@ const copy = {
     themeDark: "Escuro",
     switchToLight: "Alternar para modo claro",
     switchToDark: "Alternar para modo escuro",
+    openMenu: "Abrir menu",
+    closeMenu: "Fechar menu",
     copyResult: "Copiar resultado",
     copied: "Copiado",
     clear: "Limpar",
@@ -112,6 +114,8 @@ const copy = {
     themeDark: "Dark",
     switchToLight: "Switch to light mode",
     switchToDark: "Switch to dark mode",
+    openMenu: "Open menu",
+    closeMenu: "Close menu",
     copyResult: "Copy result",
     copied: "Copied",
     clear: "Clear",
@@ -245,6 +249,7 @@ export default function Home() {
   const [dollarQuoteMode, setDollarQuoteMode] = useState<DollarQuoteMode>("live");
   const [historicalDate, setHistoricalDate] = useState("");
   const [historicalTime, setHistoricalTime] = useState("13:00");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const t = copy[language];
 
   useEffect(() => {
@@ -475,18 +480,34 @@ export default function Home() {
     <main className="min-h-screen bg-surface text-ink">
       <CryptoTicker />
 
-      <nav className="mx-auto flex min-h-[76px] w-[min(1590px,calc(100%_-_48px))] items-center justify-between gap-4 border-b border-line py-[18px] max-sm:w-[calc(100%_-_28px)] max-sm:flex-col max-sm:items-stretch">
-        <div className="inline-flex items-center gap-3 font-extrabold">
-          <span className="grid h-[34px] w-[34px] place-items-center rounded-[10px] bg-gradient-to-br from-brand to-[#35d2b3] text-white">
-            C
-          </span>
-          <span>Crypto Card Calculator</span>
+      <nav className="mx-auto grid min-h-[76px] w-[min(1590px,calc(100%_-_48px))] items-center gap-4 border-b border-line py-[18px] sm:flex sm:justify-between max-sm:w-[calc(100%_-_28px)]">
+        <div className="flex items-center justify-between gap-4">
+          <div className="inline-flex items-center gap-3 font-extrabold">
+            <span className="grid h-[34px] w-[34px] place-items-center rounded-[10px] bg-gradient-to-br from-brand to-[#35d2b3] text-white">
+              C
+            </span>
+            <span>Crypto Card Calculator</span>
+          </div>
+          <button
+            className="grid h-11 w-11 place-items-center rounded-xl border border-line bg-panel text-ink shadow-[0_8px_24px_rgb(20_20_20/0.06)] sm:hidden"
+            type="button"
+            aria-expanded={isMobileMenuOpen}
+            aria-label={isMobileMenuOpen ? t.closeMenu : t.openMenu}
+            onClick={() => setIsMobileMenuOpen((current) => !current)}
+          >
+            <MenuGlyph open={isMobileMenuOpen} />
+          </button>
         </div>
 
-        <div className="flex gap-2.5 max-sm:grid">
+        <div
+          className={`gap-2.5 sm:flex ${
+            isMobileMenuOpen ? "grid" : "hidden"
+          } max-sm:rounded-2xl max-sm:border max-sm:border-line max-sm:bg-panel max-sm:p-3 max-sm:shadow-[0_14px_32px_rgb(20_20_20/0.08)]`}
+        >
           <Link
             className="rounded-xl border border-line bg-panel px-4 py-2.5 text-center font-bold shadow-[0_8px_24px_rgb(20_20_20/0.06)]"
             href="/card-list"
+            onClick={() => setIsMobileMenuOpen(false)}
           >
             Card List
           </Link>
@@ -839,6 +860,28 @@ function Button({
     >
       {children}
     </button>
+  );
+}
+
+function MenuGlyph({ open }: { open: boolean }) {
+  return (
+    <span className="relative block h-5 w-5" aria-hidden="true">
+      <span
+        className={`absolute left-0 top-[3px] h-0.5 w-5 rounded-full bg-current transition ${
+          open ? "translate-y-[7px] rotate-45" : ""
+        }`}
+      />
+      <span
+        className={`absolute left-0 top-[10px] h-0.5 w-5 rounded-full bg-current transition ${
+          open ? "opacity-0" : ""
+        }`}
+      />
+      <span
+        className={`absolute left-0 top-[17px] h-0.5 w-5 rounded-full bg-current transition ${
+          open ? "-translate-y-[7px] -rotate-45" : ""
+        }`}
+      />
+    </span>
   );
 }
 
