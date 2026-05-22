@@ -528,7 +528,7 @@ export default function Home() {
             </button>
           </div>
           <button
-            className="inline-flex min-h-11 items-center gap-2.5 rounded-full border border-line bg-panel px-3.5 py-1.5 pl-1.5 font-extrabold shadow-[0_8px_24px_rgb(20_20_20/0.06)]"
+            className="inline-flex min-h-11 items-center justify-center gap-2.5 rounded-full border border-line bg-panel px-3.5 py-1.5 pl-1.5 font-extrabold shadow-[0_8px_24px_rgb(20_20_20/0.06)] max-sm:w-full max-sm:rounded-xl max-sm:pl-3.5"
             type="button"
             aria-label={theme === "dark" ? t.switchToLight : t.switchToDark}
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
