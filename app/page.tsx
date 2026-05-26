@@ -787,48 +787,81 @@ export default function Home() {
           </Button>
         </div>
 
-        <div className="grid gap-3">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {purchases.length === 0 ? (
-            <p className="m-0 rounded-2xl border border-dashed border-line bg-panel p-7 text-center font-extrabold text-muted">
+            <p className="m-0 rounded-2xl border border-dashed border-line bg-panel p-7 text-center font-extrabold text-muted md:col-span-2 xl:col-span-3">
               {t.emptyHistory}
             </p>
           ) : (
             purchases.map((purchase) => (
               <article
-                className="grid grid-cols-[minmax(160px,1.2fr)_repeat(5,minmax(100px,1fr))_auto] items-center gap-3 rounded-2xl border border-line bg-panel p-4 max-xl:grid-cols-3 max-lg:grid-cols-2 max-sm:grid-cols-1"
+                className="relative overflow-hidden rounded-[28px] border border-line bg-panel shadow-[0_22px_48px_rgb(20_20_20/0.08)]"
                 key={purchase.id}
               >
-                <div className="min-w-0 max-lg:col-span-full">
-                  <HistoryLabel>{t.card}</HistoryLabel>
-                  <strong className="block [overflow-wrap:anywhere] text-[17px]">{purchase.cardName}</strong>
-                  <small className="font-bold text-muted">{formatDate(purchase.createdAt)}</small>
+                <span className="absolute -left-5 top-[178px] h-10 w-10 rounded-full bg-surface" />
+                <span className="absolute -right-5 top-[178px] h-10 w-10 rounded-full bg-surface" />
+
+                <div className="grid justify-items-center gap-3 px-6 pb-6 pt-7 text-center">
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-to-br from-brand to-[#20c7aa] text-lg font-extrabold text-white shadow-[0_14px_28px_rgb(32_199_170/0.2)]">
+                    C
+                  </span>
+                  <div>
+                    <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-brand">
+                      {t.saved}
+                    </p>
+                    <h3 className="mt-1 text-2xl font-extrabold [overflow-wrap:anywhere]">
+                      {purchase.cardName}
+                    </h3>
+                    <p className="mt-1 text-sm font-bold text-muted">{formatDate(purchase.createdAt)}</p>
+                  </div>
                 </div>
-                <HistoryMetric label={t.purchase} value={money.format(purchase.purchaseBrl)} />
-                <HistoryMetric
-                  label="USDC"
-                  value={purchase.usdcCharged.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}
-                />
-                <HistoryMetric
-                  label="Cashback USD"
-                  value={`US$ ${purchase.cashbackUsd.toLocaleString("pt-BR", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 4,
-                  })}`}
-                />
-                <HistoryMetric label={t.finalCost} value={money.format(purchase.finalCost)} />
-                <HistoryMetric
-                  label={t.gain}
-                  value={`${signedMoney(purchase.netGain)} (${percent.format(purchase.netPercent)})`}
-                  tone={purchase.netGain}
-                />
-                <button
-                  className="h-[38px] w-[38px] rounded-xl border border-line bg-panel font-extrabold text-danger"
-                  type="button"
-                  aria-label={t.deletePurchase}
-                  onClick={() => setPurchases((current) => current.filter((item) => item.id !== purchase.id))}
-                >
-                  X
-                </button>
+
+                <div className="border-y border-dashed border-line px-6 py-5">
+                  <div className="grid grid-cols-2 gap-x-5 gap-y-4">
+                    <ReceiptMetric label={t.purchase} value={money.format(purchase.purchaseBrl)} />
+                    <ReceiptMetric label={t.finalCost} value={money.format(purchase.finalCost)} alignRight />
+                    <ReceiptMetric
+                      label="USDC"
+                      value={purchase.usdcCharged.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}
+                    />
+                    <ReceiptMetric label={t.dollarRate} value={money.format(purchase.dollarRate)} alignRight />
+                    <ReceiptMetric
+                      label="Cashback USD"
+                      value={`US$ ${purchase.cashbackUsd.toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 4,
+                      })}`}
+                    />
+                    <ReceiptMetric label={t.cashbackBrl} value={money.format(purchase.cashbackBrl)} alignRight />
+                  </div>
+                </div>
+
+                <div className="px-6 py-5">
+                  <div className="rounded-2xl bg-panelSoft p-4">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <HistoryLabel>{t.gain}</HistoryLabel>
+                        <strong className={`block text-xl ${toneClass(purchase.netGain)}`}>
+                          {signedMoney(purchase.netGain)}
+                        </strong>
+                      </div>
+                      <strong className={`text-right text-lg ${toneClass(purchase.netGain)}`}>
+                        {percent.format(purchase.netPercent)}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <ReceiptBarcode />
+
+                  <button
+                    className="mt-5 min-h-10 w-full rounded-xl border border-line bg-panel font-extrabold text-danger"
+                    type="button"
+                    aria-label={t.deletePurchase}
+                    onClick={() => setPurchases((current) => current.filter((item) => item.id !== purchase.id))}
+                  >
+                    {t.deletePurchase}
+                  </button>
+                </div>
               </article>
             ))
           )}
@@ -962,11 +995,30 @@ function HistoryLabel({ children }: { children: ReactNode }) {
   );
 }
 
-function HistoryMetric({ label, value, tone }: { label: string; value: string; tone?: number }) {
+function ReceiptMetric({
+  label,
+  value,
+  alignRight,
+}: {
+  label: string;
+  value: string;
+  alignRight?: boolean;
+}) {
   return (
-    <div>
-      <HistoryLabel>{label}</HistoryLabel>
-      <strong className={`block text-[15px] ${toneClass(tone)}`}>{value}</strong>
+    <div className={alignRight ? "text-right" : ""}>
+      <span className="mb-1 block text-[11px] font-extrabold uppercase tracking-[0.04em] text-muted">
+        {label}
+      </span>
+      <strong className="block text-[15px]">{value}</strong>
+    </div>
+  );
+}
+
+function ReceiptBarcode() {
+  return (
+    <div className="mx-auto mt-5 grid w-[min(230px,100%)] justify-items-center gap-2" aria-hidden="true">
+      <div className="h-12 w-full rounded-sm bg-[repeating-linear-gradient(90deg,rgb(var(--ink))_0_2px,transparent_2px_5px,rgb(var(--ink))_5px_6px,transparent_6px_10px,rgb(var(--ink))_10px_13px,transparent_13px_17px)] opacity-80" />
+      <span className="text-[11px] font-extrabold tracking-[0.36em] text-muted">CRYPTOCARD</span>
     </div>
   );
 }
