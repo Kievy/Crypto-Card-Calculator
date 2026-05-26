@@ -699,16 +699,6 @@ export default function Home() {
         </div>
 
         <aside className="grid content-start gap-[18px]" aria-live="polite">
-          <div className="grid min-h-[142px] content-center gap-2 rounded-3xl bg-[rgb(var(--result-bg))] p-7 text-[rgb(var(--result-text))] shadow-[0_18px_42px_rgb(20_20_20/0.18)]">
-            <span className="text-xs font-extrabold text-[rgb(var(--result-muted))]">{t.netResult}</span>
-            <strong className={`text-[clamp(36px,5vw,54px)] leading-none ${toneClass(result.netGain)}`}>
-              {signedMoney(result.netGain)}
-            </strong>
-            <small className="font-bold text-[rgb(var(--result-muted))]">
-              {percent.format(result.netPercent)} {t.onPurchase}
-            </small>
-          </div>
-
           <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
             <Summary label={t.chargedCost} value={money.format(result.chargedBrl)} />
             <Summary label={t.cashbackBrl} value={money.format(result.cashbackBrl)} />
@@ -805,7 +795,7 @@ export default function Home() {
           ) : (
             purchases.map((purchase) => (
               <article
-                className="grid grid-cols-[minmax(160px,1.2fr)_repeat(4,minmax(110px,1fr))_auto] items-center gap-3 rounded-2xl border border-line bg-panel p-4 max-lg:grid-cols-2 max-sm:grid-cols-1"
+                className="grid grid-cols-[minmax(160px,1.2fr)_repeat(5,minmax(100px,1fr))_auto] items-center gap-3 rounded-2xl border border-line bg-panel p-4 max-xl:grid-cols-3 max-lg:grid-cols-2 max-sm:grid-cols-1"
                 key={purchase.id}
               >
                 <div className="min-w-0 max-lg:col-span-full">
@@ -817,6 +807,13 @@ export default function Home() {
                 <HistoryMetric
                   label="USDC"
                   value={purchase.usdcCharged.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}
+                />
+                <HistoryMetric
+                  label="Cashback USD"
+                  value={`US$ ${purchase.cashbackUsd.toLocaleString("pt-BR", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 4,
+                  })}`}
                 />
                 <HistoryMetric label={t.finalCost} value={money.format(purchase.finalCost)} />
                 <HistoryMetric
