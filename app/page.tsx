@@ -16,6 +16,7 @@ type FormState = {
 type Purchase = {
   id: string;
   createdAt: string;
+  currency?: CurrencyCode;
   cardName: string;
   purchaseBrl: number;
   usdcCharged: number;
@@ -37,6 +38,44 @@ type LiveDollarRate = {
 
 type Language = "pt-BR" | "en";
 type DollarQuoteMode = "live" | "historical";
+type CurrencyCode = "BRL" | "ARS" | "PYG";
+
+const currencyConfigs: Record<
+  CurrencyCode,
+  {
+    code: CurrencyCode;
+    name: string;
+    symbol: string;
+    locale: string;
+    googlePair: string;
+    tradingViewPair: string;
+  }
+> = {
+  BRL: {
+    code: "BRL",
+    name: "Real brasileiro",
+    symbol: "R$",
+    locale: "pt-BR",
+    googlePair: "USD/BRL",
+    tradingViewPair: "USD/BRL",
+  },
+  ARS: {
+    code: "ARS",
+    name: "Peso argentino",
+    symbol: "$",
+    locale: "es-AR",
+    googlePair: "USD/ARS",
+    tradingViewPair: "USD/ARS",
+  },
+  PYG: {
+    code: "PYG",
+    name: "Guarani paraguaio",
+    symbol: "₲",
+    locale: "es-PY",
+    googlePair: "USD/PYG",
+    tradingViewPair: "USD/PYG",
+  },
+};
 
 const copy = {
   "pt-BR": {
@@ -49,19 +88,21 @@ const copy = {
     copyResult: "Copiar resultado",
     copied: "Copiado",
     clear: "Limpar",
+    defaultCurrency: "Moeda padrão",
+    localCurrency: "Moeda local",
     eyebrow: "Compra cripto x custo real",
     title: "Compare o preço real da sua compra.",
     subtitle:
       "Informe o valor em reais, o USDC descontado, o dólar atual e o cashback recebido para ver o custo final e o ganho líquido.",
     cardName: "Nome do cartão",
     cardPlaceholder: "Ex: Ether.fi, OKX, Kast",
-    purchaseBrl: "Valor da compra em reais",
+    purchaseBrl: "Valor da compra em moeda local",
     usdcCharged: "USDC descontado",
     dollarRate: "Dólar atual",
     cashbackUsd: "Cashback em dólar",
     liveDollar: "Dólar em tempo real",
-    liveDollarSubtitle: "USD/BRL via Google Finance",
-    liveDollarHistoricalSubtitle: "USD/BRL histórico via TradingView",
+    liveDollarSubtitle: "via Google Finance",
+    liveDollarHistoricalSubtitle: "histórico via TradingView",
     liveDollarModeLive: "Tempo real",
     liveDollarModeHistorical: "Histórico",
     historicalDate: "Dia da cotação",
@@ -75,35 +116,35 @@ const copy = {
     refreshDollar: "Atualizar",
     savePurchase: "Registrar compra",
     saved: "Compra registrada",
-    unnamedCard: "Cartao sem nome",
+    unnamedCard: "Cartão sem nome",
     fillPurchase: "Preencha a compra",
     waiting: "Aguardando valores",
-    gained: "Voce ganhou na compra",
-    paidMore: "Voce pagou mais caro",
+    gained: "Você ganhou na compra",
+    paidMore: "Você pagou mais caro",
     breakEven: "Compra empatada",
-    netResult: "Resultado liquido",
+    netResult: "Resultado líquido",
     onPurchase: "sobre a compra",
     chargedCost: "Custo cobrado",
-    cashbackBrl: "Cashback BRL",
+    cashbackBrl: "Cashback local",
     finalCost: "Custo final",
     idealUsdc: "USDC ideal",
-    diffNoCashback: "Diferenca sem cashback",
+    diffNoCashback: "Diferença sem cashback",
     effectiveRate: "Taxa efetiva",
     summaryEyebrow: "Resumo da compra",
     finalReading: "Leitura final",
-    paidActually: "Voce pagou de fato",
-    comparedToBrl: "Comparado ao preço em reais",
+    paidActually: "Você pagou de fato",
+    comparedToBrl: "Comparado ao preço local",
     totalGain: "Ganho total",
     savedPurchases: "Compras salvas",
     localHistory: "Histórico local",
     clearHistory: "Apagar histórico",
     emptyHistory: "Nenhuma compra registrada ainda.",
-    card: "Cartao",
+    card: "Cartão",
     purchase: "Compra",
     gain: "Ganho",
     deletePurchase: "Excluir compra",
-    clipboardCard: "Cartao",
-    clipboardPurchase: "Compra em reais",
+    clipboardCard: "Cartão",
+    clipboardPurchase: "Compra em moeda local",
     clipboardUsdc: "USDC descontado",
     clipboardDollar: "Dólar atual",
     clipboardFinalCost: "Custo final",
@@ -119,19 +160,21 @@ const copy = {
     copyResult: "Copy result",
     copied: "Copied",
     clear: "Clear",
+    defaultCurrency: "Default currency",
+    localCurrency: "Local currency",
     eyebrow: "Crypto purchase x real cost",
     title: "Compare the real cost of your purchase.",
     subtitle:
       "Enter the BRL purchase amount, USDC charged, current dollar rate, and cashback received to see final cost and net gain.",
     cardName: "Card name",
     cardPlaceholder: "Ex: Ether.fi, OKX, Kast",
-    purchaseBrl: "Purchase amount in BRL",
+    purchaseBrl: "Purchase amount in local currency",
     usdcCharged: "USDC charged",
     dollarRate: "Current dollar rate",
     cashbackUsd: "Cashback in dollars",
     liveDollar: "Live dollar rate",
-    liveDollarSubtitle: "USD/BRL via Google Finance",
-    liveDollarHistoricalSubtitle: "Historical USD/BRL via TradingView",
+    liveDollarSubtitle: "via Google Finance",
+    liveDollarHistoricalSubtitle: "historical via TradingView",
     liveDollarModeLive: "Real time",
     liveDollarModeHistorical: "Historical",
     historicalDate: "Quote date",
@@ -154,7 +197,7 @@ const copy = {
     netResult: "Net result",
     onPurchase: "on purchase",
     chargedCost: "Charged cost",
-    cashbackBrl: "Cashback BRL",
+    cashbackBrl: "Cashback local",
     finalCost: "Final cost",
     idealUsdc: "Ideal USDC",
     diffNoCashback: "Difference without cashback",
@@ -162,7 +205,7 @@ const copy = {
     summaryEyebrow: "Purchase summary",
     finalReading: "Final reading",
     paidActually: "You actually paid",
-    comparedToBrl: "Compared to BRL price",
+    comparedToBrl: "Compared to local price",
     totalGain: "Total gain",
     savedPurchases: "Saved purchases",
     localHistory: "Local history",
@@ -173,7 +216,7 @@ const copy = {
     gain: "Gain",
     deletePurchase: "Delete purchase",
     clipboardCard: "Card",
-    clipboardPurchase: "Purchase in BRL",
+    clipboardPurchase: "Purchase in local currency",
     clipboardUsdc: "USDC charged",
     clipboardDollar: "Current dollar rate",
     clipboardFinalCost: "Final cost",
@@ -184,6 +227,7 @@ const copy = {
 const purchasesStorageKey = "crypto-card-calculator:purchases";
 const themeStorageKey = "crypto-card-calculator:theme";
 const languageStorageKey = "crypto-card-calculator:language";
+const currencyStorageKey = "crypto-card-calculator:currency";
 
 const initialForm: FormState = {
   cardName: "",
@@ -193,18 +237,13 @@ const initialForm: FormState = {
   cashbackUsd: "",
 };
 
-const money = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
-
 const percent = new Intl.NumberFormat("pt-BR", {
   style: "percent",
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
-const brlRate = new Intl.NumberFormat("pt-BR", {
+const localRate = new Intl.NumberFormat("pt-BR", {
   minimumFractionDigits: 4,
   maximumFractionDigits: 4,
 });
@@ -213,8 +252,21 @@ function numericValue(value: string) {
   return Number.parseFloat(value.replace(",", ".")) || 0;
 }
 
-function signedMoney(value: number) {
-  return `${value > 0 ? "+" : ""}${money.format(value)}`;
+function formatLocalMoney(value: number, currency: CurrencyCode) {
+  return new Intl.NumberFormat(currencyConfigs[currency].locale, {
+    style: "currency",
+    currency,
+  }).format(value);
+}
+
+function signedLocalMoney(value: number, currency: CurrencyCode) {
+  return `${value > 0 ? "+" : ""}${formatLocalMoney(value, currency)}`;
+}
+
+function purchaseCurrency(purchase: Purchase): CurrencyCode {
+  if (purchase.currency === "ARS" || purchase.currency === "PYG") return purchase.currency;
+
+  return "BRL";
 }
 
 function createId() {
@@ -240,6 +292,7 @@ export default function Home() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [language, setLanguage] = useState<Language>("pt-BR");
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyCode>("BRL");
   const [saveFeedback, setSaveFeedback] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [needsValues, setNeedsValues] = useState(false);
@@ -251,11 +304,13 @@ export default function Home() {
   const [historicalTime, setHistoricalTime] = useState("13:00");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const t = copy[language];
+  const currencyConfig = currencyConfigs[selectedCurrency];
 
   useEffect(() => {
     const storedPurchases = localStorage.getItem(purchasesStorageKey);
     const storedTheme = localStorage.getItem(themeStorageKey);
     const storedLanguage = localStorage.getItem(languageStorageKey);
+    const storedCurrency = localStorage.getItem(currencyStorageKey);
 
     if (storedPurchases) {
       try {
@@ -274,6 +329,10 @@ export default function Home() {
     if (storedLanguage === "pt-BR" || storedLanguage === "en") {
       setLanguage(storedLanguage);
     }
+
+    if (storedCurrency === "BRL" || storedCurrency === "ARS" || storedCurrency === "PYG") {
+      setSelectedCurrency(storedCurrency);
+    }
   }, []);
 
   useEffect(() => {
@@ -289,6 +348,10 @@ export default function Home() {
     document.documentElement.lang = language;
     localStorage.setItem(languageStorageKey, language);
   }, [language]);
+
+  useEffect(() => {
+    localStorage.setItem(currencyStorageKey, selectedCurrency);
+  }, [selectedCurrency]);
 
   useEffect(() => {
     let ignore = false;
@@ -307,10 +370,10 @@ export default function Home() {
       try {
         const quoteUrl =
           dollarQuoteMode === "historical"
-            ? `/api/google-usd-brl?date=${encodeURIComponent(historicalDate)}&time=${encodeURIComponent(
+            ? `/api/google-usd-brl?currency=${selectedCurrency}&date=${encodeURIComponent(historicalDate)}&time=${encodeURIComponent(
                 historicalTime || "13:00",
               )}`
-            : "/api/google-usd-brl";
+            : `/api/google-usd-brl?currency=${selectedCurrency}`;
         const response = await fetch(quoteUrl, {
           cache: "no-store",
         });
@@ -360,7 +423,7 @@ export default function Home() {
         window.clearInterval(interval);
       }
     };
-  }, [dollarQuoteMode, historicalDate, historicalTime]);
+  }, [dollarQuoteMode, historicalDate, historicalTime, selectedCurrency]);
 
   const result = useMemo(() => {
     const cardName = form.cardName.trim() || t.unnamedCard;
@@ -431,6 +494,7 @@ export default function Home() {
       {
         id: createId(),
         createdAt: new Date().toISOString(),
+        currency: selectedCurrency,
         cardName: result.cardName,
         purchaseBrl: result.purchaseBrl,
         usdcCharged: result.usdcCharged,
@@ -453,12 +517,15 @@ export default function Home() {
     const text = [
       "Crypto Card Calculator",
       `${t.clipboardCard}: ${result.cardName}`,
-      `${t.clipboardPurchase}: ${money.format(result.purchaseBrl)}`,
+      `${t.localCurrency}: ${selectedCurrency}`,
+      `${t.clipboardPurchase}: ${formatLocalMoney(result.purchaseBrl, selectedCurrency)}`,
       `${t.clipboardUsdc}: ${result.usdcCharged.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}`,
-      `${t.clipboardDollar}: ${money.format(result.dollarRate)}`,
-      `Cashback: ${money.format(result.cashbackBrl)}`,
-      `${t.clipboardFinalCost}: ${money.format(result.finalCost)}`,
-      `${t.clipboardNetGain}: ${signedMoney(result.netGain)} (${percent.format(result.netPercent)})`,
+      `${t.clipboardDollar}: ${formatLocalMoney(result.dollarRate, selectedCurrency)}`,
+      `Cashback: ${formatLocalMoney(result.cashbackBrl, selectedCurrency)}`,
+      `${t.clipboardFinalCost}: ${formatLocalMoney(result.finalCost, selectedCurrency)}`,
+      `${t.clipboardNetGain}: ${signedLocalMoney(result.netGain, selectedCurrency)} (${percent.format(
+        result.netPercent,
+      )})`,
     ].join("\n");
 
     try {
@@ -527,6 +594,20 @@ export default function Home() {
               EN
             </button>
           </div>
+          <label className="grid min-w-[170px] gap-1 rounded-xl border border-line bg-panel px-3 py-2 shadow-[0_8px_24px_rgb(20_20_20/0.06)]">
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-muted">
+              {t.defaultCurrency}
+            </span>
+            <select
+              className="bg-transparent text-sm font-extrabold text-ink outline-none"
+              value={selectedCurrency}
+              onChange={(event) => setSelectedCurrency(event.target.value as CurrencyCode)}
+            >
+              <option value="BRL">BRL - Real</option>
+              <option value="ARS">ARS - Peso argentino</option>
+              <option value="PYG">PYG - Guarani paraguaio</option>
+            </select>
+          </label>
           <button
             className="inline-flex min-h-11 items-center justify-center gap-2.5 rounded-full border border-line bg-panel px-3.5 py-1.5 pl-1.5 font-extrabold shadow-[0_8px_24px_rgb(20_20_20/0.06)] max-sm:w-full max-sm:rounded-xl max-sm:pl-3.5"
             type="button"
@@ -616,10 +697,15 @@ export default function Home() {
                 <div>
                   <div className="flex flex-wrap items-end gap-x-3 gap-y-1">
                     <strong className="text-3xl font-extrabold">
-                      {liveDollarRate ? `R$ ${brlRate.format(liveDollarRate.value)}` : "--"}
+                      {liveDollarRate ? `${currencyConfig.symbol} ${localRate.format(liveDollarRate.value)}` : "--"}
                     </strong>
                     <span className="pb-1 text-sm font-bold text-muted">
-                      {dollarQuoteMode === "historical" ? t.liveDollarHistoricalSubtitle : t.liveDollarSubtitle}
+                      {currencyConfig.googlePair}{" "}
+                      {dollarQuoteMode === "historical"
+                        ? t.liveDollarHistoricalSubtitle
+                        : liveDollarRate?.source
+                          ? `via ${liveDollarRate.source}`
+                          : t.liveDollarSubtitle}
                     </span>
                   </div>
                   <p className="mt-2 text-sm font-bold text-muted">
@@ -658,8 +744,8 @@ export default function Home() {
             </Field>
             <NumberField
               id="purchaseBrl"
-              label={t.purchaseBrl}
-              prefix="R$"
+              label={`${t.purchaseBrl} (${selectedCurrency})`}
+              prefix={currencyConfig.symbol}
               value={form.purchaseBrl}
               placeholder="0,00"
               onChange={(value) => updateField("purchaseBrl", value)}
@@ -674,8 +760,8 @@ export default function Home() {
             />
             <NumberField
               id="dollarRate"
-              label={t.dollarRate}
-              prefix="R$"
+              label={`${t.dollarRate} ${currencyConfig.googlePair}`}
+              prefix={currencyConfig.symbol}
               value={form.dollarRate}
               placeholder="0,00"
               onChange={(value) => updateField("dollarRate", value)}
@@ -700,9 +786,9 @@ export default function Home() {
 
         <aside className="grid content-start gap-[18px]" aria-live="polite">
           <div className="grid grid-cols-2 gap-3 max-sm:grid-cols-1">
-            <Summary label={t.chargedCost} value={money.format(result.chargedBrl)} />
-            <Summary label={t.cashbackBrl} value={money.format(result.cashbackBrl)} />
-            <Summary label={t.finalCost} value={money.format(result.finalCost)} />
+            <Summary label={t.chargedCost} value={formatLocalMoney(result.chargedBrl, selectedCurrency)} />
+            <Summary label={t.cashbackBrl} value={formatLocalMoney(result.cashbackBrl, selectedCurrency)} />
+            <Summary label={t.finalCost} value={formatLocalMoney(result.finalCost, selectedCurrency)} />
             <Summary
               label={t.idealUsdc}
               value={result.idealUsdc.toLocaleString("pt-BR", {
@@ -715,10 +801,12 @@ export default function Home() {
           <div className="grid grid-cols-2 gap-3 rounded-[18px] border border-line bg-panel p-5 max-sm:grid-cols-1">
             <SummaryInline
               label={t.diffNoCashback}
-              value={`${signedMoney(result.grossDiff)} (${percent.format(result.grossDiffPercent)})`}
+              value={`${signedLocalMoney(result.grossDiff, selectedCurrency)} (${percent.format(
+                result.grossDiffPercent,
+              )})`}
               tone={result.grossDiff}
             />
-            <SummaryInline label={t.effectiveRate} value={money.format(result.effectiveRate)} />
+            <SummaryInline label={t.effectiveRate} value={formatLocalMoney(result.effectiveRate, selectedCurrency)} />
           </div>
 
           <section className="relative min-h-[260px] overflow-hidden rounded-[28px] border border-line bg-[linear-gradient(135deg,rgb(var(--panel))_0%,rgb(var(--panel))_58%,rgb(var(--panel-soft))_100%)] p-7 shadow-[0_22px_48px_rgb(20_20_20/0.12)] max-sm:p-5">
@@ -750,10 +838,10 @@ export default function Home() {
                   {t.paidActually}
                 </span>
                 <strong className="text-[clamp(34px,5vw,48px)] leading-none">
-                  {money.format(result.finalCost)}
+                  {formatLocalMoney(result.finalCost, selectedCurrency)}
                 </strong>
                 <span className={`text-lg font-extrabold ${toneClass(result.netGain)}`}>
-                  {signedMoney(result.netGain)} ({percent.format(result.netPercent)})
+                  {signedLocalMoney(result.netGain, selectedCurrency)} ({percent.format(result.netPercent)})
                 </span>
               </div>
 
@@ -761,7 +849,7 @@ export default function Home() {
                 <div>
                   <span className="mb-1 block text-xs font-extrabold text-muted">{t.comparedToBrl}</span>
                   <strong className={`block text-lg ${toneClass(result.netGain)}`}>
-                    {signedMoney(result.netGain)}
+                    {signedLocalMoney(result.netGain, selectedCurrency)}
                   </strong>
                 </div>
                 <div className="text-right max-sm:text-left">
@@ -818,13 +906,24 @@ export default function Home() {
 
                 <div className="border-y border-dashed border-line px-6 py-5">
                   <div className="grid grid-cols-2 gap-x-5 gap-y-4">
-                    <ReceiptMetric label={t.purchase} value={money.format(purchase.purchaseBrl)} />
-                    <ReceiptMetric label={t.finalCost} value={money.format(purchase.finalCost)} alignRight />
+                    <ReceiptMetric
+                      label={`${t.purchase} (${purchaseCurrency(purchase)})`}
+                      value={formatLocalMoney(purchase.purchaseBrl, purchaseCurrency(purchase))}
+                    />
+                    <ReceiptMetric
+                      label={t.finalCost}
+                      value={formatLocalMoney(purchase.finalCost, purchaseCurrency(purchase))}
+                      alignRight
+                    />
                     <ReceiptMetric
                       label="USDC"
                       value={purchase.usdcCharged.toLocaleString("pt-BR", { maximumFractionDigits: 4 })}
                     />
-                    <ReceiptMetric label={t.dollarRate} value={money.format(purchase.dollarRate)} alignRight />
+                    <ReceiptMetric
+                      label={`${t.dollarRate} USD/${purchaseCurrency(purchase)}`}
+                      value={formatLocalMoney(purchase.dollarRate, purchaseCurrency(purchase))}
+                      alignRight
+                    />
                     <ReceiptMetric
                       label="Cashback USD"
                       value={`US$ ${purchase.cashbackUsd.toLocaleString("pt-BR", {
@@ -832,7 +931,11 @@ export default function Home() {
                         maximumFractionDigits: 4,
                       })}`}
                     />
-                    <ReceiptMetric label={t.cashbackBrl} value={money.format(purchase.cashbackBrl)} alignRight />
+                    <ReceiptMetric
+                      label={t.cashbackBrl}
+                      value={formatLocalMoney(purchase.cashbackBrl, purchaseCurrency(purchase))}
+                      alignRight
+                    />
                   </div>
                 </div>
 
@@ -842,7 +945,7 @@ export default function Home() {
                       <div>
                         <HistoryLabel>{t.gain}</HistoryLabel>
                         <strong className={`block text-xl ${toneClass(purchase.netGain)}`}>
-                          {signedMoney(purchase.netGain)}
+                          {signedLocalMoney(purchase.netGain, purchaseCurrency(purchase))}
                         </strong>
                       </div>
                       <strong className={`text-right text-lg ${toneClass(purchase.netGain)}`}>
@@ -1027,3 +1130,4 @@ function toneClass(value?: number) {
   if (!value) return "";
   return value > 0 ? "text-success" : "text-danger";
 }
+

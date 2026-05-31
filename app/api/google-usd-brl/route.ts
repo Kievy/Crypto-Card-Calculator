@@ -1,10 +1,31 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const googleFinanceUrl = "https://www.google.com/finance/beta/quote/USD-BRL?hl=pt";
 const tradingViewSocketUrl = "wss://data.tradingview.com/socket.io/websocket";
-const tradingViewSymbol = "FX_IDC:USDBRL";
 
 export const dynamic = "force-dynamic";
+
+type CurrencyCode = "BRL" | "ARS" | "PYG";
+
+const currencyConfigs: Record<CurrencyCode, { googleSymbol: string; tradingViewSymbol: string }> = {
+  BRL: {
+    googleSymbol: "USD-BRL",
+    tradingViewSymbol: "FX_IDC:USDBRL",
+  },
+  ARS: {
+    googleSymbol: "USD-ARS",
+    tradingViewSymbol: "FX_IDC:USDARS",
+  },
+  PYG: {
+    googleSymbol: "USD-PYG",
+    tradingViewSymbol: "FX_IDC:USDPYG",
+  },
+};
+
+function currencyFromParam(value: string | null): CurrencyCode {
+  if (value === "ARS" || value === "PYG") return value;
+
+  return "BRL";
+}
 
 function parseNumber(value: string) {
   const trimmed = value.trim();
@@ -25,7 +46,7 @@ function textFromHtml(html: string) {
     .trim();
 }
 
-function parseGooglePrice(html: string) {
+function parseGooglePrice(html: string, currency: CurrencyCode) {
   const dataPrice = html.match(/data-last-price="([^"]+)"/)?.[1];
   const visiblePrice = html.match(/class="YMlKec[^"]*">([^<]+)</)?.[1];
   const directPrice = dataPrice ?? visiblePrice;
@@ -35,12 +56,9 @@ function parseGooglePrice(html: string) {
   }
 
   const text = textFromHtml(html);
-  const marker =
-    text.match(/Dólar americano\s*\/\s*Real brasileiro([\s\S]{0,120})/) ??
-    text.match(/United States Dollar\s*\/\s*Brazilian Real([\s\S]{0,120})/) ??
-    text.match(/USD\s*\/\s*BRL([\s\S]{0,180})/);
-
-  const rawPrice = marker?.[1]?.match(/\b\d+[,.]\d{3,5}\b/)?.[0];
+  const symbol = currencyConfigs[currency].googleSymbol.replace("-", "\\s*[/-]\\s*");
+  const marker = text.match(new RegExp(`${symbol}([\\s\\S]{0,180})`, "i"));
+  const rawPrice = marker?.[1]?.match(/\b\d+[,.]\d{2,6}\b/)?.[0];
 
   return rawPrice ? parseNumber(rawPrice) : null;
 }
@@ -109,23 +127,28 @@ function candlesFromTimescaleUpdate(frame: { p?: unknown[] }) {
     });
 }
 
-async function fetchHistoricalRate(date: string, time: string) {
+async function fetchTradingViewRate({
+  currency,
+  selectedTimestamp,
+  countBack,
+}: {
+  currency: CurrencyCode;
+  selectedTimestamp: number;
+  countBack: number;
+}) {
   process.env.WS_NO_BUFFER_UTIL = "1";
   process.env.WS_NO_UTF_8_VALIDATE = "1";
 
   const { default: WebSocket } = await import("ws");
-  const selectedTimestamp = saoPauloTimestamp(date, time);
-  const nowTimestamp = Math.floor(Date.now() / 1000);
-  const fiveMinuteBarsSinceDate = Math.ceil(Math.max(0, nowTimestamp - selectedTimestamp) / 300);
-  const countBack = Math.min(Math.max(fiveMinuteBarsSinceDate + 80, 300), 10000);
   const chartSession = tradingViewSession("cs");
+  const tradingViewSymbol = currencyConfigs[currency].tradingViewSymbol;
   const symbolPayload = JSON.stringify({
     adjustment: "splits",
     session: "regular",
     symbol: tradingViewSymbol,
   });
 
-  return await new Promise<NextResponse>((resolve, reject) => {
+  return await new Promise<{ sourceUrl: string; timestamp: number; value: number }>((resolve, reject) => {
     const socket = new WebSocket(tradingViewSocketUrl, {
       headers: {
         Origin: "https://www.tradingview.com",
@@ -171,15 +194,11 @@ async function fetchHistoricalRate(date: string, time: string) {
           : best;
       }, quotes[0]);
 
-      resolve(
-        NextResponse.json({
-          source: "TradingView",
-          sourceUrl: `https://www.tradingview.com/symbols/${tradingViewSymbol.replace(":", "-")}/`,
-          updatedAt: new Date(closest.timestamp * 1000).toISOString(),
-          requestedAt: `${date}T${time}:00`,
-          value: Number(closest.value.toFixed(4)),
-        }),
-      );
+      resolve({
+        sourceUrl: `https://www.tradingview.com/symbols/${tradingViewSymbol.replace(":", "-")}/`,
+        timestamp: closest.timestamp,
+        value: Number(closest.value.toFixed(4)),
+      });
     });
 
     socket.addEventListener("error", () => {
@@ -190,17 +209,52 @@ async function fetchHistoricalRate(date: string, time: string) {
   });
 }
 
+async function fetchHistoricalRate(date: string, time: string, currency: CurrencyCode) {
+  const selectedTimestamp = saoPauloTimestamp(date, time);
+  const nowTimestamp = Math.floor(Date.now() / 1000);
+  const fiveMinuteBarsSinceDate = Math.ceil(Math.max(0, nowTimestamp - selectedTimestamp) / 300);
+  const countBack = Math.min(Math.max(fiveMinuteBarsSinceDate + 80, 300), 10000);
+  const quote = await fetchTradingViewRate({ currency, selectedTimestamp, countBack });
+
+  return NextResponse.json({
+    source: "TradingView",
+    sourceUrl: quote.sourceUrl,
+    updatedAt: new Date(quote.timestamp * 1000).toISOString(),
+    requestedAt: `${date}T${time}:00`,
+    currency,
+    value: quote.value,
+  });
+}
+
+async function fetchTradingViewLiveRate(currency: CurrencyCode) {
+  const quote = await fetchTradingViewRate({
+    currency,
+    selectedTimestamp: Math.floor(Date.now() / 1000),
+    countBack: 80,
+  });
+
+  return NextResponse.json({
+    source: "TradingView",
+    sourceUrl: quote.sourceUrl,
+    updatedAt: new Date(quote.timestamp * 1000).toISOString(),
+    currency,
+    value: quote.value,
+  });
+}
+
 export async function GET(request: NextRequest) {
   const date = request.nextUrl.searchParams.get("date");
   const time = request.nextUrl.searchParams.get("time") ?? "13:00";
+  const currency = currencyFromParam(request.nextUrl.searchParams.get("currency"));
+  const googleFinanceUrl = `https://www.google.com/finance/beta/quote/${currencyConfigs[currency].googleSymbol}?hl=pt`;
 
   if (date) {
     try {
-      return await fetchHistoricalRate(date, time);
+      return await fetchHistoricalRate(date, time, currency);
     } catch {
       return NextResponse.json(
         {
-          error: "Unable to fetch historical TradingView USD/BRL rate",
+          error: `Unable to fetch historical TradingView USD/${currency} rate`,
         },
         {
           status: 502,
@@ -227,27 +281,32 @@ export async function GET(request: NextRequest) {
     }
 
     const html = await response.text();
-    const value = parseGooglePrice(html);
+    const value = parseGooglePrice(html, currency);
 
     if (!value) {
-      throw new Error("Could not parse Google Finance USD/BRL rate");
+      throw new Error(`Could not parse Google Finance USD/${currency} rate`);
     }
 
     return NextResponse.json({
       source: "Google Finance",
       sourceUrl: googleFinanceUrl,
       updatedAt: new Date().toISOString(),
+      currency,
       value,
     });
   } catch {
-    return NextResponse.json(
-      {
-        error: "Unable to fetch Google Finance USD/BRL rate",
-      },
-      {
-        status: 502,
-      },
-    );
+    try {
+      return await fetchTradingViewLiveRate(currency);
+    } catch {
+      return NextResponse.json(
+        {
+          error: `Unable to fetch USD/${currency} rate`,
+        },
+        {
+          status: 502,
+        },
+      );
+    }
   } finally {
     clearTimeout(timeout);
   }
